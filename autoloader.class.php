@@ -52,11 +52,16 @@ class AutoloaderClass {
         // normalize the base directory with a trailing separator
         $base_dir = rtrim( $base_dir, DIRECTORY_SEPARATOR ) . '/';
         // initialize the namespace prefix array
-        if( isset( $this->prefixes[$prefix] ) === false ) { $this->prefixes[$prefix] = array(); }
+        if( isset( $this->prefixes[$prefix] ) === false ) {
+            $this->prefixes[$prefix] = array();
+        }
 
         // retain the base directory for the namespace prefix
-        if( $prepend ) { array_unshift( $this->prefixes[$prefix], $base_dir ); }
-        else { array_push( $this->prefixes[$prefix], $base_dir ); }
+        if( $prepend ) {
+            array_unshift( $this->prefixes[$prefix], $base_dir );
+            return;
+        }
+        array_push( $this->prefixes[$prefix], $base_dir );
     }
 
     /**

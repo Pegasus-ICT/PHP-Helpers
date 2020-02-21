@@ -16,6 +16,7 @@
  *
  */
 namespace PegasusICT\PhpHelpers;
+
 use PegasusICT\MasterClass;
 use function \in_array;
 
@@ -32,7 +33,7 @@ require_once __DIR__."configuration.class.php";
  * @method  void debug   ( string $__FUNCTION__, string $line = '' )
  */
 class Logger extends MasterClass {
-    private const DEFAULTS = [
+    const DEFAULTS = [
         'logDir'   => __DIR__ . "../logs/",
         'fileSize' => 4,
         'fileName' => "PegasusICT_Logger",
@@ -41,32 +42,6 @@ class Logger extends MasterClass {
         'cycle'    => "day",
     ];
     private const LEVELS   = [ "disabled", "critical", "error", "warning", "notice", "info", "verbose", "debug" ];
-
-// internal variables
-    /**
-     * @var string
-     */
-    private $maxLevel;
-    /**
-     * @var string
-     */
-    private $logDir;
-    /**
-     * @var array
-     */
-    private $subjects;
-    /**
-     * @var null|int|string either day|week|month or number of days or null to cycle only by filesize limit
-     */
-    private $cycle;
-    /**
-     * @var int filesize limit of logfiles
-     */
-    private $fileSize;
-    /**
-     * @var string base name for logfiles
-     */
-    private $fileName;
 
 ///// Singleton start /////
     /**
@@ -92,70 +67,6 @@ class Logger extends MasterClass {
 ///// Singleton end /////
 
     /**
-     * Logger constructor.
-     *
-     * @param string            $__CLASS__  Class or File name of the caller
-     * @param string|null       $superClass Class or File name of the caller's caller
-     * @param string|array|null $cfg        Logger config provided by caller
-     */
-    public function __construct( string $__CLASS__, $superClass=null, $cfg = null ) {
-        $this->callerClass = $__CLASS__ ?? false;
-        $this->superClass  = $superClass??false;
-
-        $this->init( $cfg );
-    }
-
-    /**
-     * Gets the configuration
-     *
-     * @param string|null       $__CLASS__  Class name of the caller
-     * @param string|array|null $cfg        Logger config provided by caller
-     */
-    private function init( $cfg = null ):void {
-        $this->config = new Configuration( __CLASS__ , $this->callerClass ?? null, $cfg );
-        foreach( self::DEFAULTS as $key => $defaultValue ) {
-            $this->$key = $this->config->get( $key ) ?? $defaultValue;
-        }
-    }
-
-    /**
-     *  Setting the maximum level to process
-     *
-     * If no argument is provided, the configuration is checked.
-     * If all else fails, "warning" is set (production safe...)
-     *
-     * @param string|null $maxLevel
-     *
-     * @return Logger
-     */
-    public function setMaxLevel( ?string $maxLevel=null ): Logger {
-        $this->maxLevel = $maxLevel ??
-                          $this->config->get( 'maxLevel') ??
-                          self::DEFAULTS['maxLevel'];
-
-        return $this;
-    }
-
-    /**
-     * Returns the maximum level which will be processed.
-     * in case of flunt calls: if parameter $result is not _exactly_ null, it will hold the return value
-     * @example $logger->getMaxLevel($maxLevel="");
-     *
-     * @param string|null $result
-     *
-     * @return Logger|string
-     */
-    public function getMaxLevel( ?string &$result=null ) {
-        if(empty($this->maxLevel)){
-            $this->setMaxLevel();
-        }
-
-        $result = (null!==$result) ? $this->maxLevel : null;
-
-        return $result ?? $this;
-    }
-
-    /**
      * This function acts as a validator & switchboard for:
      *  - sending messages to the log stack,        <level>(__FUNCTION__ <message>)
      *
@@ -167,7 +78,7 @@ class Logger extends MasterClass {
     public function __call( string $level, ?array $functionAndMessage ): Logger {
         $function = $functionAndMessage[0] ?? "_unknown Function_";
         $message = $functionAndMessage[1] ?? "";
-        if( in_array( $level, self::LEVELS, false )
+        if(self::LEVELS[0] !== $level && in_array( $level, self::LEVELS, false )
             && ArrayTools::indexOff( $level, self::LEVELS ) <= ArrayTools::indexOff( $this->maxLevel, self::LEVELS ) ) {
             return $this->_log( $level, $this->superClass."->".$this->callerClass, $function, $message );
 
@@ -184,9 +95,11 @@ class Logger extends MasterClass {
     /**
      * The actual logging function
      *
+     * @param string $level
+     *
+     * @param string $class
      * @param string $function
      * @param string $line
-     * @param string $level
      *
      * @return Logger
      */
@@ -195,10 +108,10 @@ class Logger extends MasterClass {
         foreach( $this->subjects as $key => $value ) {
             if( is_array( $value ) ){ $subjects[$key]=$value; }
             foreach($subjects as $subject => $levels) {
-                $min     = $this->index( $levels[ 'min' ] );
-                $max     = $this->index( $levels[ 'max' ] );
-                $index   = $this->index( $level );
-                $Allowed = $this->index($this->maxLevel );
+                $min     = ArrayTools::indexOff( $levels[ 'min' ], self::LEVELS );
+                $max     = ArrayTools::indexOff(  $levels[ 'max' ], self::LEVELS );
+                $index   = ArrayTools::indexOff(  $level , self::LEVELS);
+                $Allowed = ArrayTools::indexOff( $this->maxLevel , self::LEVELS);
                 if( $index >= $min && $index <= $max && $index <= $Allowed ) {
                     $logLine = date( "H:i:s,u" ) . " [" . strtoupper( $level ) . "] $class->$function(): $line";
                     $this->write($subject, $logLine);
@@ -206,15 +119,6 @@ class Logger extends MasterClass {
             }
         }
         return $this;
-    }
-
-    /**
-     * @param string|null $logDir
-     *
-     * @return Logger
-     */
-    public function setLogDir( ?string $logDir=null ): Logger {
-        return $this->set('logDir', $logDir);
     }
 
     /**
