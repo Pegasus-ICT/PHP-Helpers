@@ -1,4 +1,5 @@
 <?php
+declare( strict_types=1 );
 
 namespace PegasusICT\PhpHelpers;
 
@@ -8,7 +9,6 @@ namespace PegasusICT\PhpHelpers;
  * @package PegasusICT\PhpHelpers
  */
 class TypeException extends GeneralException {
-    // Type Exceptions
-    const XCPT_TYPE_ERR = 2000;
-    const XCPT_NO_URL   = 2001;
+    const EXCEPT_TYPE_ERROR = 2000;
+    const EXCEPT_NO_URL     = 2001;
 }
